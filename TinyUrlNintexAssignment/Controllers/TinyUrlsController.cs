@@ -1,86 +1,117 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using TinyUrlNintexAssignment.Services;
 using TinyUrlNintexAssignment.Models;
 using TinyUrlNintexAssignment.Operations;
+using System.Collections.Generic;
 
 namespace TinyUrlNintexAssignment.Controllers
 {
+    /// <summary>
+    /// TinyUrls Controller holds the actions for performing url services.
+    /// </summary>
     public class TinyUrlsController : Controller
     {
 
         private readonly ITinyUrlService _service;
 
+        /// <summary>
+        /// TinyUrls Controller's constructor is used to initialize the service call.
+        /// </summary>
+        /// <param name="service">Pass in service object.</param>
+        /// TODO: Logging and caching can be initialized here.
         public TinyUrlsController(ITinyUrlService service)
         {
             _service = service;
+            
         }
 
-        public IActionResult Index()
-        {
-            //TODO
-            return RedirectToAction(actionName: nameof(Create));
-        }
-
-        public IActionResult Create()
-        {
-            return View();
-        }
-
+        /// <summary>
+        /// Create action is used to create tiny urls by accepting original urls.
+        /// </summary>
+        /// <param name="OriginalUrl">Pass in Original url.</param>
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult Create(string OriginalUrl)
+        public JsonResult Create(string OriginalUrl)
         {
-            var TinyUrl = new TinyUrl()
+            try
             {
-                OriginalUrl = OriginalUrl
-            };
+                if (TinyUrlHelper.ValidateUrl(OriginalUrl))
+                {
+                    var tinyUrl = new TinyUrl()
+                    {
+                        OriginalUrl = OriginalUrl
+                    };
 
-            TryValidateModel(TinyUrl);
-            if (ModelState.IsValid)
-            {
-                _service.Save(TinyUrl);
-                return RedirectToAction(actionName: nameof(ViewTinyUrl), routeValues: new { id = TinyUrl.Id });
+                    TryValidateModel(tinyUrl);
+                    if (ModelState.IsValid)
+                    {
+                        tinyUrl.Id = _service.Save(tinyUrl);
+
+                        var JsonResults = new TinyUrlViewModel(tinyUrl, TinyUrlHelper.GetFullUrl(tinyUrl.Id, Request));
+                        return Json(JsonResults);
+
+                    }
+                }
+
+                throw new UriFormatException("URL format is invalid!");
             }
-            return View(TinyUrl);
+
+            catch(Exception ex)
+            {
+                Response.StatusCode = 500;
+                return Json("Exception was thrown - "+ex.Message);
+            }
         }
 
-        public IActionResult ViewTinyUrl(int? id)
+        /// <summary>
+        /// ViewOriginalUrl action is used to view the original Url.
+        /// </summary>
+        /// <param name="encodedHash">Pass in encoded hash.</param>
+        public JsonResult ViewOriginalUrl(string encodedHash)
         {
-            if (!id.HasValue)
+            if (string.IsNullOrEmpty(encodedHash) || string.IsNullOrWhiteSpace(encodedHash))
             {
-                return NotFound();
+                throw new ArgumentNullException("encodedUrl", "Encoded URL cannot be empty!");
             }
 
-            var shortUrl = _service.GetById(id.Value);
-            if (shortUrl == null)
+            var tinyUrlObject = _service.GetByPath(encodedHash);
+            if (tinyUrlObject == null)
             {
-                return NotFound();
+                Response.StatusCode = 404;
+                return Json("Cannot find the URL, Please check the Encoded URL and try again!");
             }
 
-            ViewData["Path"] = TinyUrlHelper.Encode(shortUrl.Id);
-
-            return View(shortUrl);
+           
+            return Json(tinyUrlObject);
         }
 
-        [HttpGet("/ShortUrls/RedirectTo/{path:required}", Name = "ShortUrls_RedirectTo")]
-        public IActionResult RedirectTo(string path)
+        /// <summary>
+        /// RedirectTo action is used to redirect user to original url provided by the user.
+        /// </summary>
+        /// <param name="encodedHash">Pass in encoded hash.</param>
+        public IActionResult RedirectTo(string encodedHash)
         {
-            if (path == null)
+            if (encodedHash == null)
             {
                 return NotFound();
             }
 
-            var shortUrl = _service.GetByPath(path);
-            if (shortUrl == null)
+            var tinyUrlObject = _service.GetByPath(encodedHash);
+            if (tinyUrlObject == null)
             {
                 return NotFound();
             }
 
-            return Redirect(shortUrl.OriginalUrl);
+            return Redirect(tinyUrlObject.OriginalUrl);
         }
+
+        /// <summary>
+        /// Gets all the url objects stored .
+        /// </summary>
+        public JsonResult GetAll()
+        {
+            return Json(_service.GetAll());
+        }
+
     }
 }

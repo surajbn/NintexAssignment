@@ -43,6 +43,7 @@ namespace TinyUrlNintexAssignment
 
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddMemoryCache();
             services.AddDbContext<TinyUrlContext>(options => options.UseSqlite("filename=TinyUrls.db"));
             services.AddScoped<ITinyUrlService, TinyUrlService>();
         }
@@ -66,13 +67,18 @@ namespace TinyUrlNintexAssignment
             app.UseStaticFiles();
             app.UseCookiePolicy();
 
-            app.UseMvcWithDefaultRoute();
-            // app.UseMvc(routes =>
-            //{
-            //    routes.MapRoute(
-            //        name: "default",
-            //        template: "{controller=Home}/{action=Index}/{id?}");
-            //});
+           // app.UseMvcWithDefaultRoute();
+             app.UseMvc(routes =>
+            {
+                routes.MapRoute(
+                name: "RedirectToExternalUrl",
+                template: "{path}",
+                 defaults: new { controller = "TinyUrls", action = "RedirectTo" });
+
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Home}/{action=Index}/{id?}");              
+            });
         }
     }
 }
