@@ -17,7 +17,7 @@ namespace TinyUrlNintexAssignment.Tests.Services
     public class TinyUrlServiceTest
     {
         public Mock<ITinyUrlService> _service;
-        private Mock<IDbContextOptions>  context;
+        private Mock<IDbContextOptions> context;
         private Mock<IMemoryCache> memCached;
         
         TinyUrlRepositoryMock _mockData;
@@ -28,20 +28,14 @@ namespace TinyUrlNintexAssignment.Tests.Services
         }
         private void Initialize()
         {
-            var context = new Mock<IDbContextOptions>() ;
+            context = new Mock<IDbContextOptions>() ;
             memCached = new Mock<IMemoryCache>();
             _mockData = new TinyUrlRepositoryMock();
             _service = new Mock<ITinyUrlService>();
-            _service.Setup(p => p.GetAll()).Returns(_mockData.GetListOfUrls());
-            
+            _service.Setup(p => p.GetAll()).Returns(_mockData.GetListOfUrls());           
 
         }
 
-      //  [Fact]
-        //public void testing()
-        //{
-        //   // TinyUrlsController controller = new TinyUrlsController(_service.Object);
-        //   // var allUrlsByController = controller.GetAll();
-        //}
+      
     }
 }
